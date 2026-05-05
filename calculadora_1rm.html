@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora 1RM — Powerlifting</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Georgia', serif;
+    background: #0d0d0d;
+    color: #f0ece4;
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+  .container { max-width: 600px; margin: 0 auto; }
+
+  h1 {
+    font-family: 'Georgia', serif;
+    font-size: 13px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #888;
+    margin-bottom: 0.5rem;
+  }
+  .subtitle {
+    font-size: 32px;
+    font-weight: 700;
+    color: #f0ece4;
+    margin-bottom: 2rem;
+    line-height: 1.1;
+  }
+
+  .movement-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-bottom: 2rem;
+  }
+  .mov-btn {
+    padding: 10px 6px;
+    border: 1px solid #333;
+    border-radius: 4px;
+    background: #111;
+    color: #888;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+  .mov-btn:hover { border-color: #555; color: #ccc; }
+  .mov-btn.active {
+    border-color: #c0392b;
+    color: #f0ece4;
+    background: #1a0805;
+  }
+
+  .input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 1.5rem;
+  }
+  .field label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 8px;
+  }
+  .field input, .field select {
+    width: 100%;
+    font-size: 28px;
+    font-weight: 700;
+    border: none;
+    border-bottom: 1px solid #333;
+    background: transparent;
+    color: #f0ece4;
+    padding: 4px 0 8px;
+    outline: none;
+    font-family: 'Georgia', serif;
+  }
+  .field input:focus { border-bottom-color: #c0392b; }
+  .field select { font-size: 16px; cursor: pointer; }
+  .field select option { background: #111; }
+
+  .result-block {
+    border-top: 1px solid #222;
+    padding-top: 2rem;
+    margin-top: 1rem;
+    display: none;
+  }
+  .result-header {
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #666;
+    margin-bottom: 8px;
+  }
+  .result-value-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 2rem;
+  }
+  .result-number {
+    font-size: 72px;
+    font-weight: 700;
+    color: #f0ece4;
+    line-height: 1;
+    font-family: 'Georgia', serif;
+  }
+  .result-unit {
+    font-size: 24px;
+    color: #666;
+  }
+
+  .formula-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid #222;
+  }
+  .ftab {
+    padding: 8px 14px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: none;
+    background: none;
+    color: #555;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.1s;
+  }
+  .ftab:hover { color: #aaa; }
+  .ftab.active { color: #f0ece4; border-bottom-color: #c0392b; }
+
+  .rep-table { width: 100%; border-collapse: collapse; }
+  .rep-table th {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #555;
+    text-align: left;
+    padding: 4px 0;
+    border-bottom: 1px solid #222;
+    font-weight: 400;
+  }
+  .rep-table td {
+    font-size: 15px;
+    padding: 9px 0;
+    border-bottom: 1px solid #1a1a1a;
+    color: #ccc;
+  }
+  .rep-table tr:last-child td { border-bottom: none; }
+  .rep-table td:nth-child(2) { font-weight: 700; color: #f0ece4; }
+  .rep-table td:nth-child(3) { color: #555; font-size: 13px; }
+  .rep-table tr.highlight td { color: #f0ece4; }
+  .rep-table tr.highlight td:first-child { color: #c0392b; font-weight: 700; }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem 0;
+    color: #444;
+    font-size: 14px;
+    border-top: 1px solid #1a1a1a;
+    margin-top: 1rem;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Calculadora</h1>
+  <div class="subtitle">Repetición máxima<br>1RM</div>
+
+  <div class="movement-grid" id="movGrid">
+    <button class="mov-btn active" data-mov="Sentadilla">Sentadilla</button>
+    <button class="mov-btn" data-mov="Press de banca">Press banca</button>
+    <button class="mov-btn" data-mov="Peso muerto">Peso muerto</button>
+    <button class="mov-btn" data-mov="Press militar">Press militar</button>
+    <button class="mov-btn" data-mov="Dominadas">Dominadas</button>
+    <button class="mov-btn" data-mov="Hip thrust">Hip thrust</button>
+  </div>
+
+  <div class="input-row">
+    <div class="field">
+      <label>Peso levantado</label>
+      <input type="number" id="weight" placeholder="100" min="1" max="999" />
+    </div>
+    <div class="field">
+      <label>Unidad</label>
+      <select id="unit">
+        <option value="kg">kg</option>
+        <option value="lb">lb</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="input-row">
+    <div class="field">
+      <label>Repeticiones</label>
+      <input type="number" id="reps" placeholder="5" min="1" max="30" />
+    </div>
+    <div class="field">
+      <label>RIR (reps reserva)</label>
+      <select id="rir">
+        <option value="0">0 — al fallo</option>
+        <option value="1">1 — casi al fallo</option>
+        <option value="2">2 — con reserva</option>
+        <option value="3">3 — cómodo</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="resultBlock" class="result-block">
+    <div class="result-header">1RM estimado — <span id="movLabel">Sentadilla</span></div>
+    <div class="result-value-row">
+      <span class="result-number" id="rm1val">—</span>
+      <span class="result-unit" id="rm1unit">kg</span>
+    </div>
+
+    <div class="formula-tabs">
+      <button class="ftab active" data-f="epley">Epley</button>
+      <button class="ftab" data-f="brzycki">Brzycki</button>
+      <button class="ftab" data-f="lombardi">Lombardi</button>
+      <button class="ftab" data-f="oconner">O'Conner</button>
+    </div>
+
+    <table class="rep-table">
+      <thead>
+        <tr>
+          <th>Reps</th>
+          <th>Peso</th>
+          <th>% del 1RM</th>
+        </tr>
+      </thead>
+      <tbody id="repBody"></tbody>
+    </table>
+  </div>
+
+  <div id="emptyState" class="empty-state">
+    Ingresá el peso y las repeticiones para calcular tu 1RM
+  </div>
+</div>
+
+<script>
+const formulas = {
+  epley:    (w, r) => r === 1 ? w : w * (1 + r / 30),
+  brzycki:  (w, r) => r === 1 ? w : w * (36 / (37 - r)),
+  lombardi: (w, r) => r === 1 ? w : w * Math.pow(r, 0.1),
+  oconner:  (w, r) => r === 1 ? w : w * (1 + r / 40),
+};
+
+const percentages = [100, 95, 90, 85, 80, 75, 70, 65, 60];
+const repsForPct  = [1,   2,  3,  4,  5,  6,  8,  10, 12];
+
+let currentFormula = 'epley';
+let currentMov = 'Sentadilla';
+let highlightReps = 1;
+
+document.querySelectorAll('.mov-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mov-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentMov = btn.dataset.mov;
+    document.getElementById('movLabel').textContent = currentMov;
+    calculate();
+  });
+});
+
+document.querySelectorAll('.ftab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.ftab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    currentFormula = tab.dataset.f;
+    calculate();
+  });
+});
+
+['weight','reps','unit','rir'].forEach(id => {
+  document.getElementById(id).addEventListener('input', calculate);
+  document.getElementById(id).addEventListener('change', calculate);
+});
+
+function calculate() {
+  const wRaw = parseFloat(document.getElementById('weight').value);
+  const repsRaw = parseInt(document.getElementById('reps').value);
+  const unit = document.getElementById('unit').value;
+  const rir = parseInt(document.getElementById('rir').value);
+
+  if (!wRaw || !repsRaw || repsRaw < 1 || wRaw <= 0) {
+    document.getElementById('resultBlock').style.display = 'none';
+    document.getElementById('emptyState').style.display = 'block';
+    return;
+  }
+
+  const effectiveReps = repsRaw + rir;
+  const rm1 = formulas[currentFormula](wRaw, effectiveReps);
+
+  document.getElementById('rm1val').textContent = Math.round(rm1);
+  document.getElementById('rm1unit').textContent = unit;
+  document.getElementById('movLabel').textContent = currentMov;
+
+  const tbody = document.getElementById('repBody');
+  tbody.innerHTML = '';
+  percentages.forEach((pct, i) => {
+    const repCount = repsForPct[i];
+    const w = Math.round(rm1 * pct / 100);
+    const tr = document.createElement('tr');
+    if (repCount === repsRaw) tr.classList.add('highlight');
+    tr.innerHTML = `<td>${repCount} rep${repCount > 1 ? 's' : ''}</td><td>${w} ${unit}</td><td>${pct}%</td>`;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('resultBlock').style.display = 'block';
+  document.getElementById('emptyState').style.display = 'none';
+}
+</script>
+</body>
+</html>
